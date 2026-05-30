@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Premium Secure Gallery & Selection Generator</title>
+    
+    <!-- FIREBASE SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js"></script>
+
     <style>
         /* =========================
            GLOBAL THEME VARIABLES
@@ -18,6 +24,8 @@
             --text-main: #1F2937;
             --text-muted: #6B7280;
             --border: #E5E7EB;
+            --danger: #EF4444;
+            --warning: #F59E0B;
         }
 
         * {
@@ -39,6 +47,83 @@
         }
 
         /* =========================
+           AUTH HEADER (LOGIN/CREDITS)
+           ========================= */
+        .auth-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 9999;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .auth-header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .auth-header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-text {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .credit-badge {
+            background: linear-gradient(135deg, var(--success), #059669);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .credit-badge.low {
+            background: linear-gradient(135deg, var(--warning), #D97706);
+        }
+
+        .credit-badge.empty {
+            background: linear-gradient(135deg, var(--danger), #DC2626);
+        }
+
+        .user-email {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .btn-logout {
+            background: #F3F4F6;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-main);
+            transition: all 0.2s ease;
+        }
+
+        .btn-logout:hover {
+            background: var(--border);
+        }
+
+        /* =========================
            MAIN CONTAINER STYLES
            ========================= */
         .container {
@@ -49,11 +134,9 @@
             border-radius: 16px;
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
             border: 1px solid var(--border);
+            margin-top: 80px;
         }
 
-        /* =========================
-           HEADER SECTION
-           ========================= */
         .header {
             text-align: center;
             margin-bottom: 30px;
@@ -87,6 +170,15 @@
                 grid-template-columns: 1fr;
                 gap: 0;
             }
+            .auth-header {
+                flex-direction: column;
+                gap: 12px;
+                padding: 12px;
+            }
+            .auth-header-left, .auth-header-right {
+                width: 100%;
+                justify-content: center;
+            }
         }
 
         label {
@@ -98,7 +190,8 @@
         }
 
         input[type="text"],
-        input[type="password"] {
+        input[type="password"],
+        input[type="email"] {
             width: 100%;
             padding: 12px 16px;
             border-radius: 8px;
@@ -117,7 +210,108 @@
         }
 
         /* =========================
-           IMAGE UPLOAD DROP ZONE
+           AUTH SCREENS (LOGIN/SIGNUP)
+           ========================= */
+        .auth-screen {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        }
+
+        .auth-screen.show {
+            display: flex !important;
+        }
+
+        .auth-card {
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+        }
+
+        .auth-card h2 {
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .auth-card p {
+            color: var(--text-muted);
+            font-size: 14px;
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .auth-card .form-group {
+            margin-bottom: 16px;
+        }
+
+        .auth-card .form-group label {
+            margin-bottom: 6px;
+        }
+
+        .btn-auth {
+            width: 100%;
+            padding: 12px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-bottom: 12px;
+            transition: all 0.2s ease;
+            font-size: 15px;
+        }
+
+        .btn-auth:hover {
+            background: var(--primary-hover);
+        }
+
+        .btn-auth:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .auth-toggle {
+            text-align: center;
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        .auth-toggle button {
+            background: none;
+            border: none;
+            color: var(--primary);
+            cursor: pointer;
+            font-weight: 600;
+            text-decoration: underline;
+        }
+
+        .auth-error {
+            background: #FEE2E2;
+            color: #991B1B;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            display: none;
+        }
+
+        .auth-error.show {
+            display: block;
+        }
+
+        /* =========================
+           UPLOAD ZONE
            ========================= */
         .upload-zone {
             border: 2px dashed var(--border);
@@ -192,7 +386,6 @@
             cursor: pointer;
             font-weight: 600;
             padding: 4px 8px;
-            flex: none;
             border-radius: 6px;
         }
 
@@ -298,7 +491,7 @@
             color: white;
         }
 
-        .btn-generate:hover {
+        .btn-generate:hover:not(:disabled) {
             background-color: var(--primary-hover);
         }
 
@@ -348,8 +541,129 @@
         }
 
         /* =========================
-           INFO BADGE
+           BUY CREDITS MODAL
            ========================= */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 5000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.show {
+            display: flex !important;
+        }
+
+        .modal-card {
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .modal-header h2 {
+            font-size: 24px;
+            font-weight: 800;
+            margin: 0;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-muted);
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+        }
+
+        .modal-close:hover {
+            background: #F3F4F6;
+        }
+
+        .credit-packs {
+            display: grid;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .credit-pack {
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .credit-pack:hover {
+            border-color: var(--primary);
+            background: #F9FAFB;
+        }
+
+        .credit-pack.selected {
+            border-color: var(--primary);
+            background: #EEF2FF;
+        }
+
+        .credit-pack-credits {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        .credit-pack-label {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .credit-pack-price {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--success);
+            margin-top: 8px;
+        }
+
+        .btn-buy-credits {
+            width: 100%;
+            background: var(--primary);
+            color: white;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-buy-credits:hover {
+            background: var(--primary-hover);
+        }
+
+        .btn-buy-credits:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
         .info-badge {
             display: inline-flex;
             align-items: center;
@@ -363,47 +677,90 @@
             border-radius: 99px;
             margin-top: 10px;
         }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
 
-<div id="loginWall" style="
-position:fixed;
-inset:0;
-background:white;
-display:flex;
-justify-content:center;
-align-items:center;
-z-index:999999;
-">
-  <div style="
-  background:#fff;
-  padding:40px;
-  border-radius:16px;
-  box-shadow:0 10px 30px rgba(0,0,0,.15);
-  text-align:center;
-  width:350px;
-  ">
-      <h2>Photo Selection Tool</h2>
-      <p>Please login to continue</p>
+    <!-- ===== AUTH HEADER ===== -->
+    <div class="auth-header" id="authHeader">
+        <div class="auth-header-left">
+            <div class="logo-text">📸 PhotoGallery Pro</div>
+        </div>
+        <div class="auth-header-right">
+            <div id="authStatus" style="display: none;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div id="creditBadgeContainer"></div>
+                    <div>
+                        <div style="font-size: 13px; font-weight: 600; color: var(--text-main);" id="userDisplayName"></div>
+                        <div class="user-email" id="userEmailDisplay"></div>
+                    </div>
+                    <button class="btn-logout" onclick="logout()">Logout</button>
+                </div>
+            </div>
+            <div id="authNotLoggedIn">
+                <button class="btn-logout" onclick="showAuthScreen('login')" style="background: var(--primary); color: white;">Login / Signup</button>
+            </div>
+        </div>
+    </div>
 
-      <button onclick="loginWithGoogle()" style="
-      padding:12px 20px;
-      background:#4285F4;
-      color:white;
-      border:none;
-      border-radius:8px;
-      cursor:pointer;
-      ">
-      Login with Google
-      </button>
-  </div>
-</div>
+    <!-- ===== AUTH SCREEN (LOGIN/SIGNUP) ===== -->
+    <div class="auth-screen" id="authScreen">
+        <div class="auth-card">
+            <div id="authError" class="auth-error"></div>
 
-<div id="toolContainer" style="display:none;">
+            <!-- LOGIN FORM -->
+            <div id="loginForm">
+                <h2>Welcome Back</h2>
+                <p>Login to access your gallery generator</p>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="loginEmail" placeholder="photographer@example.com">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="loginPassword" placeholder="••••••••">
+                </div>
+                <button class="btn-auth" onclick="handleLogin()">Login</button>
+                <div class="auth-toggle">
+                    Don't have an account? <button onclick="switchToSignup()">Sign up here</button>
+                </div>
+            </div>
 
-    <!-- Main Form Container -->
-    <div class="container">
+            <!-- SIGNUP FORM -->
+            <div id="signupForm" style="display: none;">
+                <h2>Get Started</h2>
+                <p>Create your free account</p>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="signupEmail" placeholder="photographer@example.com">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="signupPassword" placeholder="••••••••">
+                </div>
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="signupName" placeholder="Your Name">
+                </div>
+                <button class="btn-auth" onclick="handleSignup()">Create Account (Get 3 Free Credits!)</button>
+                <div class="auth-toggle">
+                    Already have an account? <button onclick="switchToLogin()">Login here</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== MAIN GALLERY GENERATOR ===== -->
+    <div class="container" id="mainContainer" style="display: none;">
         <!-- Header Section -->
         <div class="header">
             <h1>Secure Selection Gallery Generator</h1>
@@ -429,7 +786,7 @@ z-index:999999;
             <input type="text" id="whatsappNumber" placeholder="Include country code without '+' or '00' (e.g., 919876543210)">
         </div>
 
-        <!-- IMAGE UPLOAD ZONE (replaces textarea) -->
+        <!-- IMAGE UPLOAD ZONE -->
         <div class="form-group">
             <label>Upload Images (Embedded as Base64 — No External Files Needed)</label>
             <div class="upload-zone" id="uploadZone">
@@ -443,7 +800,7 @@ z-index:999999;
                 Images are converted to Base64 Data URLs and stored inside the generated HTML file
             </span>
 
-            <!-- Preview thumbnails after selection -->
+            <!-- Preview thumbnails -->
             <div id="previewGrid">
                 <div class="preview-header">
                     <span class="preview-count" id="previewCount">0 images selected</span>
@@ -452,7 +809,7 @@ z-index:999999;
                 <div class="preview-thumbs" id="previewThumbs"></div>
             </div>
 
-            <!-- Reading progress bar -->
+            <!-- Progress bar -->
             <div id="progressWrap">
                 <div class="progress-label" id="progressLabel">Reading images… 0 / 0</div>
                 <div class="progress-bar-track">
@@ -474,20 +831,257 @@ z-index:999999;
         </div>
     </div>
 
+    <!-- ===== BUY CREDITS MODAL ===== -->
+    <div class="modal-overlay" id="buyCreditsModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2>Buy Credits</h2>
+                <button class="modal-close" onclick="closeBuyCreditsModal()">×</button>
+            </div>
+            
+            <div style="margin-bottom: 24px; padding: 16px; background: #FEF3C7; border-radius: 8px; text-align: center;">
+                <strong id="creditsNeededText" style="color: #92400E;">You need 1 credit to generate a gallery</strong>
+            </div>
+
+            <p style="color: var(--text-muted); margin-bottom: 20px; text-align: center;">Choose a credit pack:</p>
+
+            <div class="credit-packs">
+                <div class="credit-pack" onclick="selectCreditPack(3, 99)">
+                    <div class="credit-pack-credits">3</div>
+                    <div class="credit-pack-label">credits</div>
+                    <div class="credit-pack-price">₹99</div>
+                </div>
+                <div class="credit-pack" onclick="selectCreditPack(10, 249)">
+                    <div class="credit-pack-credits">10</div>
+                    <div class="credit-pack-label">credits</div>
+                    <div class="credit-pack-price">₹249</div>
+                </div>
+                <div class="credit-pack" onclick="selectCreditPack(30, 599)">
+                    <div class="credit-pack-credits">30</div>
+                    <div class="credit-pack-label">credits</div>
+                    <div class="credit-pack-price">₹599</div>
+                </div>
+                <div class="credit-pack" onclick="selectCreditPack(100, 1499)">
+                    <div class="credit-pack-credits">100</div>
+                    <div class="credit-pack-label">credits</div>
+                    <div class="credit-pack-price">₹1,499</div>
+                </div>
+            </div>
+
+            <button class="btn-buy-credits" id="paymentBtn" onclick="processPayment()" disabled>
+                Select a pack to continue
+            </button>
+        </div>
+    </div>
+
     <div id="toast">Gallery Generated Successfully!</div>
 
     <script>
-        // =========================
-        // STATE
-        // =========================
+        // ========================================
+        //          FIREBASE CONFIG
+        // ========================================
+        // 🔧 REPLACEd ddd THESE WITH YOUR FIREBASE CONFIG
+        // Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyC-p-xjcMGmb9WevrcchPNCrm3rk_tqMDg",
+  authDomain: "photoselectiontool-f6b36.firebaseapp.com",
+  projectId: "photoselectiontool-f6b36",
+  storageBucket: "photoselectiontool-f6b36.firebasestorage.app",
+  messagingSenderId: "1031705182047",
+  appId: "1:1031705182047:web:e9f099ce146cc77bfb80ea",
+  measurementId: "G-X7TZT82QC3"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // ========================================
+        //          GLOBAL STATE
+        // ========================================
+        let currentUser = null;
+        let userCredits = 0;
         let generatedHTML = "";
-
-        // imageData stores: { name: string, dataUrl: string }
         let imageData = [];
+        let selectedCreditPack = { credits: 0, price: 0 };
 
-        // =========================
-        // DRAG & DROP WIRING
-        // =========================
+        // ========================================
+        //          AUTH STATE LISTENER
+        // ========================================
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                currentUser = user;
+                await loadUserData(user.uid);
+                showMainInterface();
+            } else {
+                currentUser = null;
+                showAuthInterface();
+            }
+        });
+
+        // ========================================
+        //          LOAD USER DATA FROM FIRESTORE
+        // ========================================
+        async function loadUserData(uid) {
+            try {
+                const userDoc = await db.collection('users').doc(uid).get();
+                
+                if (!userDoc.exists) {
+                    // First time user - create with 3 free credits
+                    await db.collection('users').doc(uid).set({
+                        email: currentUser.email,
+                        name: currentUser.displayName || 'Photographer',
+                        credits: 3,
+                        galleries_generated: 0,
+                        created_at: new Date(),
+                        last_login: new Date()
+                    });
+                    userCredits = 3;
+                } else {
+                    userCredits = userDoc.data().credits || 0;
+                }
+
+                updateCreditDisplay();
+                updateUserDisplay();
+            } catch (err) {
+                console.error('Error loading user data:', err);
+                showToast('Error loading your account');
+            }
+        }
+
+        // ========================================
+        //          UPDATE UI DISPLAYS
+        // ========================================
+        function updateCreditDisplay() {
+            const container = document.getElementById('creditBadgeContainer');
+            let badgeClass = '';
+            if (userCredits === 0) badgeClass = 'empty';
+            else if (userCredits <= 2) badgeClass = 'low';
+            
+            container.innerHTML = `
+                <div class="credit-badge ${badgeClass}">
+                    ⭐ ${userCredits} ${userCredits === 1 ? 'Credit' : 'Credits'}
+                </div>
+            `;
+        }
+
+        function updateUserDisplay() {
+            document.getElementById('userDisplayName').textContent = currentUser.displayName || 'Photographer';
+            document.getElementById('userEmailDisplay').textContent = currentUser.email;
+        }
+
+        function showMainInterface() {
+            document.getElementById('authScreen').classList.remove('show');
+            document.getElementById('mainContainer').style.display = 'block';
+            document.getElementById('authStatus').style.display = 'block';
+            document.getElementById('authNotLoggedIn').style.display = 'none';
+        }
+
+        function showAuthInterface() {
+            document.getElementById('mainContainer').style.display = 'none';
+            document.getElementById('authStatus').style.display = 'none';
+            document.getElementById('authNotLoggedIn').style.display = 'block';
+        }
+
+        // ========================================
+        //          AUTH FUNCTIONS
+        // ========================================
+        function showAuthScreen(tab) {
+            document.getElementById('authScreen').classList.add('show');
+            if (tab === 'login') {
+                document.getElementById('loginForm').style.display = 'block';
+                document.getElementById('signupForm').style.display = 'none';
+            } else {
+                document.getElementById('loginForm').style.display = 'none';
+                document.getElementById('signupForm').style.display = 'block';
+            }
+            clearAuthErrors();
+        }
+
+        function switchToSignup() {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('signupForm').style.display = 'block';
+            clearAuthErrors();
+        }
+
+        function switchToLogin() {
+            document.getElementById('signupForm').style.display = 'none';
+            document.getElementById('loginForm').style.display = 'block';
+            clearAuthErrors();
+        }
+
+        async function handleLogin() {
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+
+            if (!email || !password) {
+                showAuthError('Please fill in all fields');
+                return;
+            }
+
+            try {
+                await auth.signInWithEmailAndPassword(email, password);
+                document.getElementById('authScreen').classList.remove('show');
+            } catch (err) {
+                showAuthError(err.message);
+            }
+        }
+
+        async function handleSignup() {
+            const email = document.getElementById('signupEmail').value.trim();
+            const password = document.getElementById('signupPassword').value;
+            const name = document.getElementById('signupName').value.trim();
+
+            if (!email || !password || !name) {
+                showAuthError('Please fill in all fields');
+                return;
+            }
+
+            if (password.length < 6) {
+                showAuthError('Password must be at least 6 characters');
+                return;
+            }
+
+            try {
+                const result = await auth.createUserWithEmailAndPassword(email, password);
+                await result.user.updateProfile({ displayName: name });
+                document.getElementById('authScreen').classList.remove('show');
+            } catch (err) {
+                showAuthError(err.message);
+            }
+        }
+
+        function logout() {
+            auth.signOut();
+            showToast('Logged out successfully');
+        }
+
+        function showAuthError(message) {
+            const errorDiv = document.getElementById('authError');
+            errorDiv.textContent = message;
+            errorDiv.classList.add('show');
+        }
+
+        function clearAuthErrors() {
+            document.getElementById('authError').classList.remove('show');
+        }
+
+        // ========================================
+        //          DRAG & DROP
+        // ========================================
         const uploadZone = document.getElementById("uploadZone");
 
         uploadZone.addEventListener("dragover", (e) => {
@@ -511,9 +1105,9 @@ z-index:999999;
             if (files.length > 0) readFiles(files);
         });
 
-        // =========================
-        // READ FILES → BASE64
-        // =========================
+        // ========================================
+        //          READ FILES TO BASE64
+        // ========================================
         function readFiles(files) {
             const progressWrap = document.getElementById("progressWrap");
             const progressFill = document.getElementById("progressFill");
@@ -523,7 +1117,6 @@ z-index:999999;
             progressFill.style.width = "0%";
             progressLabel.textContent = `Reading images… 0 / ${files.length}`;
 
-            // Append new images (allow adding more)
             let done = 0;
             const total = files.length;
             const thumbsContainer = document.getElementById("previewThumbs");
@@ -539,11 +1132,9 @@ z-index:999999;
                     // Strip variant suffixes like (Medium), (Phone), (Small), (Custom), (Large), etc.
                     const name = file.name.replace(/\s*\([^)]*\)(?=\.[^.]+$)/i, '');
 
-                    // Avoid duplicates by name
                     if (!imageData.find(img => img.name === name)) {
                         imageData.push({ name, dataUrl });
 
-                        // Add thumbnail
                         const thumb = document.createElement("div");
                         thumb.className = "preview-thumb";
                         thumb.innerHTML = `
@@ -561,9 +1152,9 @@ z-index:999999;
                     if (done === total) {
                         setTimeout(() => {
                             progressWrap.style.display = "none";
+                            previewCount.textContent = `${imageData.length} image${imageData.length !== 1 ? "s" : ""} selected`;
+                            showToast(`${imageData.length} image${imageData.length !== 1 ? "s" : ""} loaded and ready.`);
                         }, 600);
-                        previewCount.textContent = `${imageData.length} image${imageData.length !== 1 ? "s" : ""} selected`;
-                        showNotification(`${imageData.length} image${imageData.length !== 1 ? "s" : ""} loaded and ready.`);
                     }
                 };
                 reader.readAsDataURL(file);
@@ -577,13 +1168,13 @@ z-index:999999;
             document.getElementById("imageFileInput").value = "";
             document.getElementById("downloadBtn").classList.remove("active");
             generatedHTML = "";
-            showNotification("All images cleared.");
+            showToast("All images cleared.");
         }
 
-        // =========================
-        // UTILITIES
-        // =========================
-        function showNotification(text) {
+        // ========================================
+        //          UTILITIES
+        // ========================================
+        function showToast(text) {
             const toast = document.getElementById("toast");
             toast.innerText = text;
             toast.classList.add("show");
@@ -599,18 +1190,19 @@ z-index:999999;
                 .replace(/'/g, "&#039;");
         }
 
-        // =========================
-        // GENERATE GALLERY
-        // =========================
+        // ========================================
+        //          CREDIT CHECK & GENERATION
+        // ========================================
         function generateGallery() {
-            const rawTitle = document.getElementById("galleryTitle").value.trim() || "My Selection Gallery";
-            const title = escapeHtml(rawTitle);
-            const password = document.getElementById("galleryPassword").value.trim();
-            const escapedPasswordJs = password.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-            const waNumber = document.getElementById("whatsappNumber").value.trim().replace(/[^0-9]/g, "");
+            // CHECK CREDITS FIRST
+            if (userCredits <= 0) {
+                showToast("You don't have any credits left");
+                openBuyCreditsModal();
+                return;
+            }
 
             if (imageData.length === 0) {
-                showNotification("Please upload at least one image first.");
+                showToast("Please upload at least one image first.");
                 return;
             }
 
@@ -618,11 +1210,14 @@ z-index:999999;
             btn.disabled = true;
             btn.textContent = "Building gallery…";
 
-            // Small delay to let UI update before heavy string building
             setTimeout(() => {
                 try {
-                    // Build image cards — src uses the embedded Base64 Data URL
-                    // data-name stores the original filename for the selection list
+                    const rawTitle = document.getElementById("galleryTitle").value.trim() || "My Selection Gallery";
+                    const title = escapeHtml(rawTitle);
+                    const password = document.getElementById("galleryPassword").value.trim();
+                    const escapedPasswordJs = password.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+                    const waNumber = document.getElementById("whatsappNumber").value.trim().replace(/[^0-9]/g, "");
+
                     const imageTags = imageData.map(({ name, dataUrl }) => {
                         const escapedName = escapeHtml(name);
                         const jsSafeName = escapedName.replace(/'/g, "\\'").replace(/"/g, '&quot;');
@@ -637,7 +1232,6 @@ z-index:999999;
 </div>`;
                     }).join("");
 
-                    /* PASSWORD MODULES */
                     const loginHTML = password ? `
             <div id="loginScreen" class="login-screen">
                 <div class="login-card">
@@ -669,8 +1263,113 @@ z-index:999999;
             });
             <\/script>` : "";
 
-                    // Build the final self-contained gallery HTML
-                    generatedHTML = `<!DOCTYPE html>
+                    // Build the final gallery HTML (same as before)
+                    generatedHTML = buildGalleryHTML(title, imageTags, loginHTML, passwordScript, waNumber);
+
+                    // DEDUCT 1 CREDIT FROM USER
+                    deductCredit();
+
+                    document.getElementById("downloadBtn").classList.add("active");
+                    showToast("Gallery generated! Credit deducted.");
+
+                } catch (err) {
+                    showToast("Error building gallery: " + err.message);
+                    console.error(err);
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = `<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg> Generate HTML Code`;
+                }
+            }, 50);
+        }
+
+        async function deductCredit() {
+            if (!currentUser) return;
+
+            try {
+                await db.collection('users').doc(currentUser.uid).update({
+                    credits: firebase.firestore.FieldValue.increment(-1),
+                    galleries_generated: firebase.firestore.FieldValue.increment(1),
+                    last_generated: new Date()
+                });
+
+                userCredits--;
+                updateCreditDisplay();
+            } catch (err) {
+                console.error('Error deducting credit:', err);
+            }
+        }
+
+        function downloadFile() {
+            if (!generatedHTML) {
+                showToast("Please generate your gallery first.");
+                return;
+            }
+            const blob = new Blob([generatedHTML], { type: "text/html" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "interactive-selection-gallery.html";
+            link.click();
+            showToast("Your gallery was successfully saved.");
+        }
+
+        // ========================================
+        //          CREDIT PURCHASE MODAL
+        // ========================================
+        function openBuyCreditsModal() {
+            document.getElementById('buyCreditsModal').classList.add('show');
+        }
+
+        function closeBuyCreditsModal() {
+            document.getElementById('buyCreditsModal').classList.remove('show');
+            selectedCreditPack = { credits: 0, price: 0 };
+            updatePaymentBtn();
+        }
+
+        function selectCreditPack(credits, price) {
+            selectedCreditPack = { credits, price };
+            
+            // Update UI
+            document.querySelectorAll('.credit-pack').forEach(el => {
+                el.classList.remove('selected');
+            });
+            event.currentTarget.classList.add('selected');
+            
+            updatePaymentBtn();
+        }
+
+        function updatePaymentBtn() {
+            const btn = document.getElementById('paymentBtn');
+            if (selectedCreditPack.credits > 0) {
+                btn.disabled = false;
+                btn.textContent = `Pay ₹${selectedCreditPack.price} for ${selectedCreditPack.credits} Credits`;
+            } else {
+                btn.disabled = true;
+                btn.textContent = 'Select a pack to continue';
+            }
+        }
+
+        function processPayment() {
+            // For now, show a placeholder
+            // In Phase 2, integrate Razorpay here
+            showToast('Payment integration coming soon! For now, contact support at support@photogallerypro.com');
+            
+            // TODO: Add Razorpay integration:
+            // const options = {
+            //     key: "YOUR_RAZORPAY_KEY",
+            //     amount: selectedCreditPack.price * 100,
+            //     currency: "INR",
+            //     order_id: "order_id",
+            //     ...
+            // };
+            // const rzp = new Razorpay(options);
+            // rzp.open();
+        }
+
+        // ========================================
+        //          BUILD GALLERY HTML
+        // ========================================
+        function buildGalleryHTML(title, imageTags, loginHTML, passwordScript, waNumber) {
+            return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -811,11 +1510,6 @@ z-index:999999;
         }
         .toast-notify.show { transform: translateX(-50%) translateY(0); opacity: 1; }
         #galleryContent { display: ${password ? "none" : "block"}; }
-        @media(max-width: 640px) {
-            .action-bar { flex-direction: column; gap: 12px; padding: 12px; }
-            .action-buttons { width: 100%; }
-            .action-btn { flex: 1; justify-content: center; }
-        }
         .zoom-btn {
             position: absolute; top: 12px; left: 12px;
             width: 38px; height: 38px; border: none; border-radius: 50%;
@@ -830,21 +1524,26 @@ z-index:999999;
             z-index: 99999; padding: 20px;
         }
         .zoom-overlay img { max-width: 96%; max-height: 96%; object-fit: contain; border-radius: 12px; }
+        @media(max-width: 640px) {
+            .action-bar { flex-direction: column; gap: 12px; padding: 12px; }
+            .action-buttons { width: 100%; }
+            .action-btn { flex: 1; justify-content: center; }
+        }
     </style>
 </head>
 <body>
 
-${loginHTML}
+\${loginHTML}
 
 <div id="galleryContent">
     <header class="gallery-header">
-        <h1>${title}</h1>
+        <h1>\${title}</h1>
         <p>Select your favorite photos by clicking/tapping them. Once completed, share or copy the final list from the bottom action panel.</p>
     </header>
 
     <div class="gallery-container">
         <div class="gallery-grid">
-            ${imageTags}
+            \${imageTags}
         </div>
     </div>
 
@@ -858,11 +1557,11 @@ ${loginHTML}
                 <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
                 Copy Selection
             </button>
-            ${waNumber ? `
+            \${waNumber ? \`
             <button class="action-btn btn-send-wa" onclick="sendToWhatsApp()">
                 <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.513 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.717-1.458L0 24zm6.052-4.144c1.6.95 3.177 1.45 4.809 1.451 5.485 0 9.947-4.46 9.951-9.948.002-2.66-1.019-5.162-2.87-7.017C16.141 2.488 13.64 1.47 11.002 1.47c-5.489 0-9.952 4.461-9.955 9.95-.001 1.724.47 3.413 1.365 4.907L1.442 20.89l4.667-1.034zM18.22 15c-.29-.146-1.713-.846-1.977-.942-.265-.096-.458-.145-.65.146-.193.29-.747.942-.916 1.135-.169.193-.338.217-.628.072-2.902-1.45-4.004-2.522-5.495-5.078-.393-.675.393-.627 1.125-2.088.13-.25.065-.47-.033-.664-.096-.193-.747-1.802-1.024-2.47-.27-.648-.544-.56-.747-.57l-.634-.012c-.217 0-.57.081-.868.41-.298.328-1.135 1.109-1.135 2.701 0 1.593 1.157 3.131 1.317 3.348.16.217 2.278 3.48 5.517 4.881 2.695 1.166 3.242.934 3.822.879.578-.055 1.714-.7 1.955-1.378.24-.678.24-1.259.169-1.378-.071-.12-.264-.193-.554-.339z"/></svg>
                 Send via WhatsApp
-            </button>` : ""}
+            </button>\` : ""}
         </div>
     </div>
 </div>
@@ -871,7 +1570,7 @@ ${loginHTML}
 
 <script>
     let selectedPhotos = new Set();
-    const myWhatsAppNumber = "${waNumber}";
+    const myWhatsAppNumber = "\${waNumber}";
 
     function toggleSelection(element) {
         const photoName = element.getAttribute('data-name');
@@ -929,64 +1628,19 @@ ${loginHTML}
     }
 <\/script>
 
-${passwordScript}
+\${passwordScript}
 
 <div class="zoom-overlay" id="zoomOverlay" onclick="closeZoom()">
     <img id="zoomedImage" src="">
 </div>
 
-<div style="
-position:fixed;
-top:10px;
-right:10px;
-z-index:999;
-background:white;
-padding:10px;
-border-radius:8px;
-box-shadow:0 2px 8px rgba(0,0,0,.15);
-">
-  <span id="userEmail"></span>
-  <button onclick="logoutUser()">Logout</button>
-</div>
-
-</div>
-
-<script type="module" src="app.js"></script>
-
 </body>
 </html>`;
-
-                    const downloadBtn = document.getElementById("downloadBtn");
-                    downloadBtn.classList.add("active");
-                    showNotification("Interactive Gallery Compiled! (" + imageData.length + " images embedded)");
-
-                } catch (err) {
-                    showNotification("Error building gallery: " + err.message);
-                    console.error(err);
-                } finally {
-                    btn.disabled = false;
-                    btn.innerHTML = `<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg> Generate HTML Code`;
-                }
-            }, 50);
-        }
-
-        // =========================
-        // DOWNLOAD
-        // =========================
-        function downloadFile() {
-            if (!generatedHTML) {
-                showNotification("Please generate your gallery first.");
-                return;
-            }
-            const blob = new Blob([generatedHTML], { type: "text/html" });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.download = "interactive-selection-gallery.html";
-            link.click();
-            showNotification("Your gallery was successfully saved.");
         }
     </script>
-<script type="module" src="app.js"></script>
-
+</body>
+</html>`;
+        }
+    </script>
 </body>
 </html>
