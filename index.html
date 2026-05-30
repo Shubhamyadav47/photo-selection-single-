@@ -501,7 +501,8 @@
                 const reader = new FileReader();
                 reader.onload = function (e) {
                     const dataUrl = e.target.result;
-                    const name = file.name;
+                    // Strip variant suffixes like (Medium), (Phone), (Small), (Custom), (Large), etc.
+                    const name = file.name.replace(/\s*\([^)]*\)(?=\.[^.]+$)/i, '');
 
                     // Avoid duplicates by name
                     if (!imageData.find(img => img.name === name)) {
@@ -859,7 +860,7 @@ ${loginHTML}
     function getFormattedText() {
         if (selectedPhotos.size === 0) return "";
         return Array.from(selectedPhotos)
-            .map(name => name.replace(/\\.[^/.]+$/, ".JPG"))
+            .map(name => name.replace(/\\s*\\([^)]*\\)(?=\\.[^.]+$)/i, '').replace(/\\.[^/.]+$/, ".JPG"))
             .join(" OR ");
     }
 
